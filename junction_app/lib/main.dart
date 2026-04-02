@@ -3,22 +3,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'env_config.dart';
+//import 'env_config.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  if (!EnvConfig.isConfigured) {
+//  if (!EnvConfig.isConfigured) {
     throw Exception("Missing Supabase Environment Variables");
   }
 
-  await Supabase.initialize(
-    url: EnvConfig.supabaseUrl,
-    anonKey: EnvConfig.supabaseAnonKey,
-  );
+ // await Supabase.initialize(
+//    url: EnvConfig.supabaseUrl,
+//    anonKey: EnvConfig.supabaseAnonKey,
+ // );
 
-  runApp(const ProviderScope(child: JunctionApp()));
-}
+//  runApp(const ProviderScope(child: JunctionApp()));
+//}
 
 class JunctionApp extends StatelessWidget {
   const JunctionApp({super.key});
