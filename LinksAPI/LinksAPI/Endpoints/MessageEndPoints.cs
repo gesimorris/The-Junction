@@ -1,0 +1,65 @@
+using LinksAPI.Data;
+using LinksAPI.Models;
+using Microsoft.EntityFrameworkCore;
+
+namespace LinksAPI.Endpoints;
+
+public static class MessageEndPoints
+{
+    public static void MapMessageEndPoints(this WebApplication app)
+    {
+        app.MapGet("/messages/{groupId}", async (int groupId, int userId, LinksDbContext db) =>
+        {
+            var isMember = await db.GroupMembers.AnyAsync(gm => gm.GroupId == groupId && gm.UserId == userId);
+            if (!isMember)
+            {
+                return Results.Forbid();
+            }
+            var messages = await db.Messages.Where(m => m.GroupId == groupId).ToListAsync();
+            return Results.Ok(messages);
+        });
+
+        app.MapPost("/messages", async (Message message, LinksDbContext db) =>
+        {
+            db.Messages.Add(message);
+            await db.SaveChangesAsync();
+            return Results.Created($"/messages/{message.Id}", message);
+        });
+
+        app.MapDelete("/messages/{id}", async (int id, int userId, LinksDbContext db) =>
+        {
+            var message = await db.Messages.FindAsync(id);
+            if (message == null)
+            {
+                return Results.NotFound();
+            }
+            if (message.UserId != userId)
+            {
+                return Results.Forbid();
+            }
+
+            db.Messages.Remove(message);
+            await db.SaveChangesAsync();
+            return Results.NoContent();
+        });
+
+        app.MapPut("/messages/{id}", async (int id, Message updatedMessage, int userId, LinksDbContext db) =>
+        {
+            var message = await db.Messages.FindAsync(id);
+            if (message == null)
+            {
+                return Results.NotFound();
+            }
+            if (message.UserId != userId)
+            {
+                return Results.Forbid();
+            }
+
+            message.MessageText = updatedMessage.MessageText;
+            message.MessageDate = DateTime.UtcNow;
+
+            await db.SaveChangesAsync();
+            return Results.Ok(message);
+        });
+    }
+}
