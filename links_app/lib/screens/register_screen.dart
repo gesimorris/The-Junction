@@ -23,8 +23,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text('Create your pass',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+              const Text('Create your account',
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black)),
               const SizedBox(height: 32),
               TextField(
                 controller: firstNameController,
@@ -56,7 +56,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
               ),
               TextButton(
-                onPressed: () => context.go('/'),
+                onPressed: () => context.go('/login'),
                 child: const Text('Already have an account? Sign in'),
               ),
             ],

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
+import 'package:links_app/screens/map_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
 import 'screens/home_screen.dart';
@@ -10,13 +11,20 @@ import 'screens/chat_screen.dart';
 import 'screens/friends_screen.dart';
 
 final router = GoRouter(
+  initialLocation: '/home',
   routes: [
-    GoRoute(path: '/', builder: (_, __) => const LoginScreen()),
-    GoRoute(path: '/register', builder: (_, __) => const RegisterScreen()),
-    GoRoute(path: '/home', builder: (_, __) => const HomeScreen()),
-    GoRoute(path: '/groups', builder: (_, __) => const GroupsScreen()),
-    GoRoute(path: '/chat', builder: (_, __) => const ChatScreen()),
-    GoRoute(path: '/friends', builder: (_, __) => const FriendsScreen()),
+    GoRoute(
+      path: '/home',
+      builder: (context, state) => const HomeScreen(),
+      routes: [
+        GoRoute(path: 'login', builder: (context, state) => const LoginScreen()),
+        GoRoute(path: 'register', builder: (context, state) => const RegisterScreen()),
+      ],
+    ),
+    GoRoute(path: '/map', builder: (context, state) => const MapScreen()),
+    GoRoute(path: '/groups', builder: (context, state) => const GroupsScreen()),
+    GoRoute(path: '/friends', builder: (context, state) => const FriendsScreen()),
+    GoRoute(path: '/chat', builder: (context, state) => const ChatScreen()),
   ],
 );
 
@@ -27,6 +35,11 @@ void main() {
 class LinksApp extends StatelessWidget {
   const LinksApp({super.key});
 
+  // Global Color Constants
+  static const Color kPrimary = Color(0xFFFF5C4D);    // Electric Coral
+  static const Color kBackground = Color(0xFFFDFCF9); // Warm Cream/Paper
+  static const Color kDark = Color(0xFF1A1A1A);       // Deep Charcoal
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
@@ -34,36 +47,56 @@ class LinksApp extends StatelessWidget {
       title: 'Links',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF1A1616),
-        primaryColor: const Color(0xFFFF7E5F),
-        textTheme: GoogleFonts.outfitTextTheme(ThemeData.dark().textTheme),
+        brightness: Brightness.light, // Change to Light
+        scaffoldBackgroundColor: kBackground,
+        primaryColor: kPrimary,
+        // Using 'Outfit' is a great choice—it's very bubbly and modern
+        textTheme: GoogleFonts.outfitTextTheme(ThemeData.light().textTheme),
         useMaterial3: true,
+        
+        // Bubbly Elevated Buttons
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFFFF7E5F),
+            backgroundColor: kPrimary,
             foregroundColor: Colors.white,
+            elevation: 0,
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(24), // Extra rounded
             ),
+            textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
           ),
         ),
+
+        // Modern Outlined Buttons
         outlinedButtonTheme: OutlinedButtonThemeData(
           style: OutlinedButton.styleFrom(
-            foregroundColor: Colors.white,
-            side: const BorderSide(color: Colors.white24),
+            foregroundColor: kDark,
+            side: BorderSide(color: kDark.withOpacity(0.1), width: 1.5),
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(24),
             ),
           ),
         ),
+
+        // Clean Input Fields for Light Mode
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
-          fillColor: Colors.white.withOpacity(0.05),
-          hintStyle: const TextStyle(color: Colors.white30),
+          fillColor: Colors.white,
+          hintStyle: TextStyle(color: kDark.withOpacity(0.3)),
+          contentPadding: const EdgeInsets.all(18),
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
+            borderRadius: BorderRadius.circular(20),
+            borderSide: BorderSide(color: kDark.withOpacity(0.05)),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(20),
+            borderSide: BorderSide(color: kDark.withOpacity(0.05)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(20),
+            borderSide: const BorderSide(color: kPrimary, width: 2),
           ),
         ),
       ),

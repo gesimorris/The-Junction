@@ -1,193 +1,260 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
+  static const Color kBackground = Color(0xFFFDFCF9); 
+  static const Color kPrimary = Color(0xFFFF5C4D);    
+  static const Color kSecondary = Color(0xFF00D2FF);  
+  static const Color kDark = Color(0xFF1A1A1A);       
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('hey, Gesi',
-                          style: TextStyle(
-                              fontSize: 20, fontWeight: FontWeight.w500)),
-                      Text('what are you doing this weekend?',
-                          style: TextStyle(
-                              fontSize: 13, color: Colors.white54)),
-                    ],
-                  ),
-                  const CircleAvatar(
-                    backgroundColor: Color(0xFFFF7E5F),
-                    child: Text('G', style: TextStyle(color: Colors.white)),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                children: [
-                  _sectionLabel('FRIENDS ATTENDING'),
-                  _eventCard(context),
-                  _sectionLabel('OPEN GROUPS NEAR YOU'),
-                  _groupCard(context, 'Paint Night crew', 'Looking for chill people', '3/5', '2 spots left'),
-                  _groupCard(context, 'Art + drinks crew', 'First timers welcome', '1/5', '4 spots left'),
-                  _sectionLabel('UPCOMING EVENTS'),
-                  _upcomingCard(context),
-                ],
-              ),
-            ),
-            bottomNav(context, 0),
+      backgroundColor: kBackground,
+      body: Stack(
+        children: [
+          _mapLayer(),
+          _topOverlay(context),
+          _draggableEventSheet(context),
+        ],
+      ),
+      bottomNavigationBar: bottomNav(context, 0),
+    );
+  }
+
+  // Functional Mini-Map Background
+  Widget _mapLayer() {
+    final LatLng truCenter = LatLng(50.6712, -120.3638); 
+
+    return FlutterMap(
+      options: MapOptions(
+        initialCenter: truCenter,
+        initialZoom: 14.0,
+        // Set to none so users don't accidentally pan the background while scrolling
+        interactionOptions: const InteractionOptions(flags: InteractiveFlag.none),
+      ),
+      children: [
+        TileLayer(
+          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+          userAgentPackageName: 'com.links.app',
+        ),
+        MarkerLayer(
+          markers: [
+            _buildMapMarker(LatLng(50.6761, -120.3408), Icons.pets, kSecondary),
+            _buildMapMarker(LatLng(50.6720, -120.3300), Icons.palette, kPrimary),
           ],
         ),
+      ],
+    );
+  }
+
+  Marker _buildMapMarker(LatLng point, IconData icon, Color color) {
+    return Marker(
+      point: point,
+      width: 45,
+      height: 45,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8)],
+        ),
+        child: Icon(icon, color: color, size: 20),
       ),
     );
   }
 
-  Widget _sectionLabel(String label) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 16, bottom: 8),
-      child: Text(label,
-          style: const TextStyle(
-              fontSize: 11,
-              color: Colors.white30,
-              letterSpacing: 1.5,
-              fontWeight: FontWeight.w500)),
-    );
-  }
+  Widget _topOverlay(BuildContext context) {
+    // This boolean will be driven by your Riverpod AuthState later
+    bool isUserLoggedIn = false; 
 
-  Widget _eventCard(BuildContext context) {
-    return GestureDetector(
-      onTap: () => context.go('/groups'),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        margin: const EdgeInsets.only(bottom: 12),
-        decoration: BoxDecoration(
-          color: const Color(0xFF241F1F),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withOpacity(0.05)),
-        ),
-        child: Column(
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _pill('Kamloops Art Party'),
-            const SizedBox(height: 6),
-            const Text('Paint Night — May 17',
-                style: TextStyle(fontWeight: FontWeight.w500)),
-            const Text('Riverside Venue · 7:00 PM',
-                style: TextStyle(fontSize: 12, color: Colors.white54)),
-            const SizedBox(height: 10),
-            const Text('6 friends going',
-                style: TextStyle(fontSize: 12, color: Colors.white38)),
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(30),
+                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 15)],
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.search, size: 20, color: Colors.black26),
+                    SizedBox(width: 10),
+                    Text('Find buddies...', style: TextStyle(color: Colors.black26, fontSize: 14)),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            
+            // Toggle between Sign Up (Guest) and Profile+Add (Member)
+            isUserLoggedIn 
+              ? _memberActions(context) 
+              : _guestActions(context),
           ],
         ),
       ),
     );
   }
 
-  Widget _groupCard(BuildContext context, String name, String sub, String count, String spots) {
+  // Shown for Guests: High-energy Sign Up button
+  Widget _guestActions(BuildContext context) {
     return GestureDetector(
-      onTap: () => context.go('/groups'),
+      onTap: () => context.push('/home/register'),
       child: Container(
-        padding: const EdgeInsets.all(14),
-        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
         decoration: BoxDecoration(
-          color: const Color(0xFF241F1F),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withOpacity(0.05)),
+          color: kPrimary,
+          borderRadius: BorderRadius.circular(25),
+          boxShadow: [
+            BoxShadow(
+              color: kPrimary.withOpacity(0.3), 
+              blurRadius: 12, 
+              offset: const Offset(0, 4)
+            )
+          ],
         ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _pill(spots, color: const Color(0xFF1D9E75)),
-                  const SizedBox(height: 4),
-                  Text(name,
-                      style: const TextStyle(fontWeight: FontWeight.w500)),
-                  Text(sub,
-                      style: const TextStyle(
-                          fontSize: 12, color: Colors.white54)),
-                ],
-              ),
-            ),
-            Column(
-              children: [
-                Text(count,
-                    style: const TextStyle(
-                        fontSize: 12, color: Colors.white38)),
-                const Text('members',
-                    style: TextStyle(fontSize: 11, color: Colors.white24)),
+        child: const Text(
+          'Sign Up',
+          style: TextStyle(
+            color: Colors.white, 
+            fontWeight: FontWeight.w900, 
+            fontSize: 13
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Shown for Members: Profile Avatar + Floating Create Button
+  Widget _memberActions(BuildContext context) {
+    return Column(
+      children: [
+        const CircleAvatar(
+          radius: 24, 
+          backgroundColor: kDark, 
+          child: Text('G', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))
+        ),
+        const SizedBox(height: 8),
+        GestureDetector(
+          onTap: () {
+            // Logic to open Create Group modal
+          },
+          child: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: kPrimary,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: kPrimary.withOpacity(0.4), 
+                  blurRadius: 8, 
+                  offset: const Offset(0, 4)
+                )
               ],
             ),
-          ],
+            child: const Icon(Icons.add, color: Colors.white, size: 20),
+          ),
         ),
-      ),
+      ],
     );
   }
 
-  Widget _upcomingCard(BuildContext context) {
-    return GestureDetector(
-      onTap: () => context.go('/groups'),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        margin: const EdgeInsets.only(bottom: 12),
-        decoration: BoxDecoration(
-          color: const Color(0xFF241F1F),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withOpacity(0.05)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _pill('May 24', color: Colors.white24),
-            const SizedBox(height: 4),
-            const Text('Kamloops Art Party — Vol. 12',
-                style: TextStyle(fontWeight: FontWeight.w500)),
-            const Text('Downtown Cultural Centre · 24 groups forming',
-                style: TextStyle(fontSize: 12, color: Colors.white54)),
-          ],
-        ),
-      ),
+  Widget _draggableEventSheet(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.35,
+      minChildSize: 0.15,
+      maxChildSize: 0.9,
+      builder: (context, scrollController) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: kBackground,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+            boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 20)],
+          ),
+          child: ListView(
+            controller: scrollController,
+            padding: const EdgeInsets.all(24),
+            children: [
+              Center(
+                child: Container(
+                  width: 45, 
+                  height: 6, 
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.05), 
+                    borderRadius: BorderRadius.circular(10)
+                  )
+                )
+              ),
+              const SizedBox(height: 25),
+              const Text(
+                'HAPPENING SOON', 
+                style: TextStyle(
+                  fontSize: 11, 
+                  fontWeight: FontWeight.w900, 
+                  letterSpacing: 1.5, 
+                  color: Colors.black26
+                )
+              ),
+              const SizedBox(height: 15),
+              _buddyCard('Cat Cafe', 'Gesi', 'Latte & Cats?', '2 spots left', kSecondary),
+              _buddyCard('Art Party', 'Shalom', 'Painting crew!', '4 spots left', kPrimary),
+            ],
+          ),
+        );
+      },
     );
   }
 
-  Widget _pill(String text, {Color? color}) {
+  Widget _buddyCard(String venue, String host, String desc, String spots, Color accent) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: (color ?? const Color(0xFFFF7E5F)).withOpacity(0.15),
-        borderRadius: BorderRadius.circular(20),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10)],
       ),
-      child: Text(text,
-          style: TextStyle(
-              fontSize: 11, color: color ?? const Color(0xFFFF7E5F))),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(venue, style: TextStyle(color: accent, fontWeight: FontWeight.w900, fontSize: 16)),
+              Text(spots, style: TextStyle(color: accent, fontSize: 11, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(desc, style: const TextStyle(fontSize: 14, color: kDark, fontWeight: FontWeight.w500)),
+        ],
+      ),
     );
   }
 }
 
 Widget bottomNav(BuildContext context, int active) {
   final items = [
-    {'icon': Icons.home_outlined, 'label': 'Home', 'route': '/home'},
+    {'icon': Icons.explore_outlined, 'label': 'Explore', 'route': '/home'},
+    {'icon': Icons.map_outlined, 'label': 'Map', 'route': '/map'},
     {'icon': Icons.group_outlined, 'label': 'Groups', 'route': '/groups'},
-    {'icon': Icons.chat_bubble_outline, 'label': 'Messages', 'route': '/messages'},
     {'icon': Icons.people_outline, 'label': 'Friends', 'route': '/friends'},
   ];
+
   return Container(
     decoration: const BoxDecoration(
-      color: Color(0xFF241F1F),
-      border: Border(top: BorderSide(color: Colors.white10)),
+      color: Colors.white,
+      border: Border(top: BorderSide(color: Colors.black12, width: 0.5)),
     ),
     child: SafeArea(
       top: false,
@@ -204,16 +271,14 @@ Widget bottomNav(BuildContext context, int active) {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(item['icon'] as IconData,
-                      color: isActive
-                          ? const Color(0xFFFF7E5F)
-                          : Colors.white38),
+                      size: 24,
+                      color: isActive ? const Color(0xFFFF5C4D) : Colors.black26),
                   const SizedBox(height: 4),
                   Text(item['label'] as String,
                       style: TextStyle(
                           fontSize: 10,
-                          color: isActive
-                              ? const Color(0xFFFF7E5F)
-                              : Colors.white38)),
+                          fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                          color: isActive ? const Color(0xFFFF5C4D) : Colors.black26)),
                 ],
               ),
             ),
